@@ -20,7 +20,7 @@ LTI 2.0 allows :
 
 #How to set the environment in ruby?
 Test with Ruby on Rails(Only environment available for a prosper test of the LTI 2.0)
-
+```
 -1- Obtain from IMS GLOBAL access to GitHub
 -2-Follow clone and build instructions in repo readme files(lti_2c, lti2_tp)
 -3-In a seperate shell starts the TCP and TP 
@@ -32,7 +32,7 @@ rails s --p 500
 
 For a clear view about the whole process visit 
 https://www.youtube.com/watch?v=3zTbtTldeiA&t=14s
-
+```
 
 #Tsugi implemented with LTI 2.0 
 
@@ -45,16 +45,17 @@ Copy the whole Tsugi folder in the root of your local server.
 
 ** Step3 **
 Go to the browser and launch Tsugi , assuming you have already configured the confi.php
-
+```
 $CFG->pdo       = 'mysql:host=127.0.0.1;dbname=tsugi';
 // $CFG->pdo       = 'mysql:host=127.0.0.1;port=8889;dbname=tsugi'; // MAMP
 $CFG->dbuser    = 'root';
 $CFG->dbpass    = '';
-
+```
 if running on mac OS, then change the following line
 
+```
 $CFG->mailsecret = 'warning:please-change-mailsecret-92ds29'; to $CFG->mailsecret = '';
-
+```
 ** Step4 **
 Login and upgrade the tables. 
 
@@ -149,7 +150,51 @@ if ( count($tc_services) < 1 ) lmsDie("At a minimum, we need the service to regi
 
 ```
 
+If the URL registered is not found return the message otherwise return true by saying an application is found 
 
+```
+if ( $register_url == false ) lmsDie("Must have an application/vnd.ims.lti.v2.toolproxy+json service available in order to do tool_registration.");
 
+// unset($_SESSION['result_url']);
+// if ( $result_url !== false ) $_SESSION['result_url'] = $result_url;
+
+echo("\nFound an application/vnd.ims.lti.v2.toolproxy+json service - nice for us...\n");
+
+```
+
+Right here wee are ready to send the registration . There is a time to set up the key for the server side
+
+```
+$key_sha256 = lti_sha256($oauth_consumer_key);
+echo("key_sha256=".$key_sha256."<br>");
+
+echo("</pre>\n");
+
+// Get the ack value
+$ack = false;
+if ( $re_register ) {
+    $ack = bin2hex(openssl_random_pseudo_bytes(10));
+}
+
+// Lets register!
+$OUTPUT->togglePre("Registration Request",htmlent_utf8($body));
+
+$more_headers = array();
+if ( $ack !== false ) {
+    $more_headers[] = 'VND-IMS-CONFIRM-URL: '.$CFG->wwwroot.
+        '/lti/tp_commit.php?commit='.urlencode($ack);
+}
+
+$response = LTI::sendOAuthBody("POST", $register_url, $reg_key, $reg_password, "application/vnd.ims.lti.v2.toolproxy+json", $body, $more_headers, $hmac256);
+
+$response_code = Net::getLastHttpResponse();
+
+global $LastOAuthBodyBaseString;
+$OUTPUT->togglePre("Registration Request Headers",htmlent_utf8(Net::getBodySentDebug()));
+$OUTPUT->togglePre("Registration Request Base String",$LastOAuthBodyBaseString);
+echo("<p>Http Response code = $response_code</p>\n");
+$OUTPUT->togglePre("Registration Response Headers",htmlent_utf8(Net::getBodyReceivedDebug()));
+
+```
 
 
