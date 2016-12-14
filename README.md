@@ -198,3 +198,111 @@ $OUTPUT->togglePre("Registration Response Headers",htmlent_utf8(Net::getBodyRece
 ```
 
 
+#Important notes about the registration phase.
+
+Talking about the key registration we do have now 3 points regards to the condictions.
+ If we do not have a key, insert one, checking carefully for a failed insert due to a unique constraint violation.  
+ If this insert fails, it is likely
+ a race condition between competing INSERTs for the same key_id
+ chekon the line 607
+ 
+ ```
+  else {
+    $key_sha256 = lti_sha256($oauth_consumer_key);
+    $retval = $PDOX->queryDie(
+        "INSERT INTO {$CFG->dbprefix}lti_key 
+            (key_sha256, key_key, user_id, secret, consumer_profile)
+        VALUES
+            (:SHA, :KEY, :UID, :SECRET, :PROFILE)
+        ON DUPLICATE KEY
+            UPDATE secret = :SECRET, consumer_profile = :PROFILE
+        ",
+        array(":SHA" => $key_sha256, ":KEY" => $oauth_consumer_key, 
+            ":UID" => $_SESSION['id'], ":SECRET" => $shared_secret,
+            ":PROFILE" => $tc_profile_json)
+    );
+    if ( ! $retval->success ) {
+        log_return_die("Unable to INSERT Registration key $oauth_consumer_key ".$retval->errorImplode);
+    }
+    $return_url_lti_message = "LTI2 Key $oauth_consumer_key inserted";
+}
+
+ ```
+
+
+Coming to the register file (register.php)
+
+ We have to make sure to deal with the situation where cookies might not be working.
+ 
+ ```
+ if (isset($_REQUEST[session_name()]) ) {
+    if ( ! isset($_COOKIE[session_name()])) {
+        session_id($_REQUEST[session_name()]);
+    }
+}
+session_start();
+
+if ( isset($_COOKIE[session_name()]) && $_COOKIE[session_name()] == session_id() ) {
+    $popup = 'register.php';
+    $register = 'lti2.php';
+} else { // Add the session id for insurance
+    $popup = 'register.php?'.session_name().'='.session_id();
+    $register = 'lti2.php?'.session_name().'='.session_id();
+}
+
+error_log('Session in register.php '.session_id());
+
+ ```
+ 
+ Now we have to watchfull do post-redirect everytime of that initial post after stashing data in the session.
+ 
+ ```
+ 
+ if ( isset($_POST["lti_message_type"]) && 
+    ( $_POST["lti_message_type"] == "ToolProxyRegistrationRequest" || $_POST["lti_message_type"] == "ToolProxyReregistrationRequest" ) ) {
+    $_SESSION['lti2post'] = $_POST;
+    header('Location: '.$popup);
+    return;
+}
+ 
+ ```
+
+
+Right here we abut to let make sure we are in the top window
+
+
+```
+
+$OUTPUT->header();
+$OUTPUT->bodyStart();
+echo('<img src="'.$OUTPUT->getSpinnerUrl().'" id="spinner">');
+?>
+<div id="popup" style="display:none">
+<p>Please click
+<a href="<?php echo($popup); ?>" target=_blank">here</a>
+to continue the registration process in a new window.
+</p>
+</div>
+<?php
+$OUTPUT->footerStart();
+?>
+<script type="text/javascript">
+topframe = false;
+try {
+    topframe = window.self === window.top ? true : false;
+} catch (e) {
+    topframe = false;
+}
+if ( topframe ) {
+    window.location.href='<?php echo($register); ?>';
+} else {
+    $("#spinner").hide();
+    $("#popup").show();
+}
+</script>
+<?php
+$OUTPUT->footerEnd();
+
+
+```
+
