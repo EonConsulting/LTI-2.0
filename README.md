@@ -374,3 +374,6 @@ $dec = '' ;
 }
 
 ```
+
+#Use another framework or component as a Tool consumer . For instance Wordpress/ OctoberCMS in the mod/app with an LTI object(JSinput's case)
+
