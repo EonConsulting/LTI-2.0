@@ -306,7 +306,7 @@ $OUTPUT->footerEnd();
 
 ```
 
-# A tiny function but very useful to convert all of our UTF-16 pages fouund in UTF-8
+# A tiny function but very useful to convert all of our UTF-16 pages found in UTF-8
 
 ```
 function utf16_to_utf8($str)
