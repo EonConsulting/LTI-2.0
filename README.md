@@ -56,6 +56,9 @@ if running on mac OS, then change the following line
 ```
 $CFG->mailsecret = 'warning:please-change-mailsecret-92ds29'; to $CFG->mailsecret = '';
 ```
+
+** Note**
+Tsugi is already pre-configured with the LTI 2.0  
 ** Step4 **
 Login and upgrade the tables. 
 
